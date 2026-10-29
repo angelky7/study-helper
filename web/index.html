@@ -416,6 +416,7 @@
                             <div class="progress-fill" id="week-progress" style="width:0%"></div>
                         </div>
                     </div>
+                    <div id="log-list" style="margin-top:1rem"></div>
                 </div>
             </div>
         </div>
@@ -627,10 +628,19 @@
         const subject = document.getElementById('log-subject').value.trim();
         const hours = parseFloat(document.getElementById('log-hours').value);
         const mood = document.getElementById('log-mood').value;
-        if (!date) { showToast('请选择日期', 'error'); return; }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) { showToast('日期无效，请重新选择', 'error'); return; }
+        if (!subject) { showToast('请输入学习内容', 'error'); return; }
+        if (!(hours > 0 && hours <= 24)) { showToast('学习时长需在 0-24 小时之间', 'error'); return; }
         data.logs.push({ date, subject, hours, mood, created: new Date().toISOString() });
         saveData(data);
+        document.getElementById('log-subject').value = '';
         showToast('学习记录已保存！');
+        renderStats();
+    }
+
+    function deleteLog(idx) {
+        data.logs.splice(idx, 1);
+        saveData(data);
         renderStats();
     }
 
@@ -639,6 +649,7 @@
             document.getElementById('total-study').textContent = '0h';
             document.getElementById('avg-study').textContent = '0h';
             document.getElementById('log-days').textContent = '0';
+            document.getElementById('log-list').innerHTML = '';
             if (studyChart) { studyChart.destroy(); studyChart = null; }
             return;
         }
@@ -658,10 +669,24 @@
         document.getElementById('week-progress').style.width = pct + '%';
         document.getElementById('week-progress-text').textContent = pct.toFixed(0) + '%';
 
-        // 图表
-        const sorted = [...data.logs].sort((a, b) => a.date.localeCompare(b.date));
-        const labels = sorted.map(l => l.date.slice(5));
-        const values = sorted.map(l => l.hours);
+        // 记录列表（按日期倒序）
+        const listEl = document.getElementById('log-list');
+        const withIdx = data.logs.map((l, i) => ({...l, idx: i}));
+        listEl.innerHTML = withIdx.sort((a, b) => b.date.localeCompare(a.date)).map(l => `
+            <div class="task-item">
+                <div class="task-info">
+                    <div class="task-name">${l.subject || '学习打卡'}</div>
+                    <div class="task-meta">${l.date} · ${l.hours}h · ${l.mood || ''}</div>
+                </div>
+                <button class="btn btn-danger" onclick="deleteLog(${l.idx})">✕</button>
+            </div>`).join('');
+
+        // 图表：同一天多条记录合并为一根柱子
+        const byDate = {};
+        data.logs.forEach(l => { byDate[l.date] = (byDate[l.date] || 0) + l.hours; });
+        const sorted = Object.keys(byDate).sort();
+        const labels = sorted.map(d => d.slice(5));
+        const values = sorted.map(d => Math.round(byDate[d] * 10) / 10);
 
         if (studyChart) studyChart.destroy();
         const ctx = document.getElementById('study-chart').getContext('2d');
