@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学涯助手 - 大学生效率工具箱</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        header p {
+            color: #888;
+            font-size: 1.05rem;
+            margin-top: 0.3rem;
+        }
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #e8e8e8;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { color: #667eea; }
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #444;
+        }
+        /* Grid */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        }
+        /* Forms */
+        .form-group { margin-bottom: 1rem; }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 0.3rem;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1.5px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-danger { background: #ff6b6b; color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+        .btn-success { background: #51cf66; color: white; padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+        /* Exam items */
+        .exam-item {
+            padding: 0.8rem 1rem;
+            border-left: 4px solid #51cf66;
+            background: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 0.6rem;
+        }
+        .exam-item.urgent { border-left-color: #ff6b6b; }
+        .exam-item.warning { border-left-color: #feca57; }
+        .exam-item .exam-name { font-weight: 600; }
+        .exam-item .exam-info { font-size: 0.85rem; color: #666; margin-top: 0.2rem; }
+        /* Task items */
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.7rem 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        .task-item.done { opacity: 0.5; text-decoration: line-through; }
+        .task-item .task-info { flex: 1; }
+        .task-item .task-name { font-weight: 500; }
+        .task-item .task-meta { font-size: 0.8rem; color: #888; }
+        /* Metrics */
+        .metric {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .metric .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .metric .label {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 0.2rem;
+        }
+        /* Progress bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e8e8e8;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        /* Tips */
+        .tips {
+            background: #f0f4ff;
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            margin-top: 1rem;
+        }
+        .tips h4 { color: #667eea; margin-bottom: 0.5rem; font-size: 0.95rem; }
+        .tips ul { padding-left: 1.2rem; font-size: 0.9rem; color: #555; }
+        .tips li { margin-bottom: 0.3rem; }
+        /* Empty state */
+        .empty {
+            text-align: center;
+            padding: 2rem;
+            color: #aaa;
+        }
+        .empty span { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1.5rem;
+            color: #aaa;
+            font-size: 0.85rem;
+            border-top: 1px solid #eee;
+        }
+        footer a { color: #667eea; text-decoration: none; }
+        /* Chart container */
+        .chart-container {
+            position: relative;
+            height: 280px;
+            margin-top: 1rem;
+        }
+        /* Notification */
+        .toast {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.8rem 1.2rem;
+            background: #333;
+            color: white;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { background: #51cf66; }
+        .toast.error { background: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 学涯助手</h1>
+            <p>选课不纠结 · 考试不慌张 · 时间不浪费</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="exam">📅 考试倒计时</button>
+            <button class="tab-btn" data-tab="course">📋 课程管理</button>
+            <button class="tab-btn" data-tab="task">✅ 任务规划</button>
+            <button class="tab-btn" data-tab="stats">📊 学习统计</button>
+        </div>
+
+        <!-- 考试倒计时 -->
+        <div class="tab-panel active" id="panel-exam">
+            <div class="grid-2">
+                <div class="card">
+                    <h3>➕ 添加考试</h3>
+                    <div class="form-group">
+                        <label>考试名称</label>
+                        <input type="text" id="exam-name" placeholder="如：高等数学期末考试">
+                    </div>
+                    <div class="form-group">
+                        <label>考试日期</label>
+                        <input type="date" id="exam-date">
+                    </div>
+                    <div class="form-group">
+                        <label>重要程度</label>
+                        <select id="exam-priority">
+                            <option value="普通">⭐ 普通</option>
+                            <option value="重要">⭐⭐ 重要</option>
+                            <option value="关键">⭐⭐⭐ 关键</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="addExam()">添加考试</button>
+                </div>
+                <div class="card">
+                    <h3>📌 即将考试</h3>
+                    <div id="exam-list"></div>
+                    <div id="exam-tips"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 课程管理 -->
+        <div class="tab-panel" id="panel-course">
+            <div class="grid-2">
+                <div class="card">
+                    <h3>➕ 添加课程</h3>
+                    <div class="form-group">
+                        <label>课程名称</label>
+                        <input type="text" id="course-name" placeholder="如：电化学原理">
+                    </div>
+                    <div class="form-group">
+                        <label>任课老师</label>
+                        <input type="text" id="course-teacher" placeholder="老师姓名">
+                    </div>
+                    <div class="form-group">
+                        <label>上课时间</label>
+                        <input type="text" id="course-time" placeholder="如：周一 3-4节">
+                    </div>
+                    <div class="form-group">
+                        <label>上课地点</label>
+                        <input type="text" id="course-location" placeholder="如：A305">
+                    </div>
+                    <div class="form-group">
+                        <label>学分</label>
+                        <input type="number" id="course-credits" value="2" min="0.5" max="10" step="0.5">
+                    </div>
+                    <button class="btn btn-primary" onclick="addCourse()">添加课程</button>
+                </div>
+                <div class="card">
+                    <h3>📚 我的课程</h3>
+                    <div class="metric" style="margin-bottom:1rem">
+                        <div class="value" id="total-credits">0</div>
+                        <div class="label">总学分</div>
+                    </div>
+                    <div id="course-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 任务规划 -->
+        <div class="tab-panel" id="panel-task">
+            <div class="grid-2">
+                <div class="card">
+                    <h3>➕ 新建任务</h3>
+                    <div class="form-group">
+                        <label>任务内容</label>
+                        <input type="text" id="task-name" placeholder="如：完成电化学实验报告">
+                    </div>
+                    <div class="form-group">
+                        <label>截止日期</label>
+                        <input type="date" id="task-deadline">
+                    </div>
+                    <div class="form-group">
+                        <label>任务类型</label>
+                        <select id="task-type">
+                            <option>📝 作业</option>
+                            <option>🔬 实验报告</option>
+                            <option>📖 预习/复习</option>
+                            <option>👥 小组任务</option>
+                            <option>📄 论文/报告</option>
+                            <option>📌 其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>预计耗时（小时）</label>
+                        <input type="number" id="task-hours" value="2" min="0.5" max="40" step="0.5">
+                    </div>
+                    <button class="btn btn-primary" onclick="addTask()">添加任务</button>
+                </div>
+                <div class="card">
+                    <h3>📋 任务列表</h3>
+                    <div class="grid-3" style="margin-bottom:1rem">
+                        <div class="metric">
+                            <div class="value" id="pending-count">0</div>
+                            <div class="label">待完成</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value" id="done-count">0</div>
+                            <div class="label">已完成</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value" id="total-hours">0h</div>
+                            <div class="label">预计耗时</div>
+                        </div>
+                    </div>
+                    <div id="task-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 学习统计 -->
+        <div class="tab-panel" id="panel-stats">
+            <div class="grid-2">
+                <div class="card">
+                    <h3>✏️ 记录今天的学习</h3>
+                    <div class="form-group">
+                        <label>日期</label>
+                        <input type="date" id="log-date">
+                    </div>
+                    <div class="form-group">
+                        <label>学习内容</label>
+                        <input type="text" id="log-subject" placeholder="如：复习电化学第三章">
+                    </div>
+                    <div class="form-group">
+                        <label>学习时长（小时）</label>
+                        <input type="number" id="log-hours" value="2" min="0.5" max="16" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>今天状态</label>
+                        <select id="log-mood">
+                            <option>😫 很累</option>
+                            <option>😐 一般</option>
+                            <option selected>🙂 不错</option>
+                            <option>🔥 充满动力</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="addLog()">保存记录</button>
+                </div>
+                <div class="card">
+                    <h3>📈 学习趋势</h3>
+                    <div class="grid-3" style="margin-bottom:1rem">
+                        <div class="metric">
+                            <div class="value" id="total-study">0h</div>
+                            <div class="label">累计学习</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value" id="avg-study">0h</div>
+                            <div class="label">日均时长</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value" id="log-days">0</div>
+                            <div class="label">打卡天数</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="study-chart"></canvas>
+                    </div>
+                    <div style="margin-top:1rem">
+                        <p style="font-size:0.85rem;color:#888">本周目标 20h · 已完成 <span id="week-progress-text">0%</span></p>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="week-progress" style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>🎓 学涯助手 · <a href="https://tianchi.aliyun.com/competition/entrance/532536" target="_blank">2026 Qoder 高校创造力大赛</a> · StudyHack 赛道</p>
+            <p>用 Qoder 开发 | 郑州轻工业大学</p>
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // 数据管理
+    function loadData() {
+        const d = localStorage.getItem('study_data');
+        return d ? JSON.parse(d) : { exams: [], courses: [], tasks: [], logs: [] };
+    }
+    function saveData(data) {
+        localStorage.setItem('study_data', JSON.stringify(data));
+    }
+    let data = loadData();
+
+    // 通知
+    function showToast(msg, type = 'success') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast show ' + type;
+        setTimeout(() => t.className = 'toast', 2500);
+    }
+
+    // 标签页切换
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+        });
+    });
+
+    // 设置默认日期
+    document.getElementById('exam-date').value = new Date(Date.now() + 30*86400000).toISOString().split('T')[0];
+    document.getElementById('task-deadline').value = new Date(Date.now() + 7*86400000).toISOString().split('T')[0];
+    document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+
+    // ===== 考试功能 =====
+    function addExam() {
+        const name = document.getElementById('exam-name').value.trim();
+        const date = document.getElementById('exam-date').value;
+        const priority = document.getElementById('exam-priority').value;
+        if (!name) { showToast('请输入考试名称', 'error'); return; }
+        if (!date) { showToast('请选择日期', 'error'); return; }
+        data.exams.push({ name, date, priority, created: new Date().toISOString() });
+        saveData(data);
+        document.getElementById('exam-name').value = '';
+        showToast('考试已添加！');
+        renderExams();
+    }
+
+    function deleteExam(idx) {
+        data.exams.splice(idx, 1);
+        saveData(data);
+        renderExams();
+    }
+
+    function renderExams() {
+        const list = document.getElementById('exam-list');
+        const tips = document.getElementById('exam-tips');
+        if (!data.exams.length) {
+            list.innerHTML = '<div class="empty"><span>📭</span>还没有添加考试</div>';
+            tips.innerHTML = '';
+            return;
+        }
+        const sorted = data.exams.map((e, i) => ({...e, idx: i})).sort((a, b) => a.date.localeCompare(b.date));
+        list.innerHTML = sorted.map(e => {
+            const days = Math.ceil((new Date(e.date) - new Date()) / 86400000);
+            let cls = '', status = '';
+            if (days < 0) { cls = ''; status = '✅ 已结束'; }
+            else if (days <= 7) { cls = 'urgent'; status = `🔴 仅剩 ${days} 天！`; }
+            else if (days <= 14) { cls = 'warning'; status = `🟡 还有 ${days} 天`; }
+            else { status = `🟢 还有 ${days} 天`; }
+            return `<div class="exam-item ${cls}">
+                <div class="exam-name">${e.name} <small>${e.priority === '关键' ? '⭐⭐⭐' : e.priority === '重要' ? '⭐⭐' : '⭐'}</small></div>
+                <div class="exam-info">${status} | 📅 ${e.date} <button class="btn btn-danger" onclick="deleteExam(${e.idx})" style="float:right">删除</button></div>
+            </div>`;
+        }).join('');
+
+        // 备考建议
+        const nearest = sorted.find(e => { const d = Math.ceil((new Date(e.date) - new Date()) / 86400000); return d >= 0 && d <= 30; });
+        if (nearest) {
+            const days = Math.ceil((new Date(nearest.date) - new Date()) / 86400000);
+            let tip = '';
+            if (days <= 3) tip = '<li><b>最后冲刺</b>：只看重点公式和错题</li><li>保证睡眠，不要熬夜</li><li>准备考试用品（证件、笔、计算器）</li>';
+            else if (days <= 7) tip = '<li><b>一周计划</b>：每天复习2-3个章节</li><li>做往年真题，找出薄弱环节</li><li>整理错题本，重点突破</li>';
+            else if (days <= 14) tip = '<li><b>两周计划</b>：系统过一遍知识点</li><li>每天学习2-3小时，保持节奏</li><li>标记难点，留时间集中攻克</li>';
+            else tip = '<li><b>提前规划</b>：了解考试范围和题型</li><li>每周投入5-8小时预习</li><li>做好课堂笔记，考前不慌</li>';
+            tips.innerHTML = `<div class="tips"><h4>💡 ${nearest.name} 备考建议</h4><ul>${tip}</ul></div>`;
+        } else { tips.innerHTML = ''; }
+    }
+
+    // ===== 课程功能 =====
+    function addCourse() {
+        const name = document.getElementById('course-name').value.trim();
+        const teacher = document.getElementById('course-teacher').value.trim();
+        const time = document.getElementById('course-time').value.trim();
+        const location = document.getElementById('course-location').value.trim();
+        const credits = parseFloat(document.getElementById('course-credits').value);
+        if (!name) { showToast('请输入课程名称', 'error'); return; }
+        data.courses.push({ name, teacher, time, location, credits, created: new Date().toISOString() });
+        saveData(data);
+        ['course-name','course-teacher','course-time','course-location'].forEach(id => document.getElementById(id).value = '');
+        showToast('课程已添加！');
+        renderCourses();
+    }
+
+    function deleteCourse(idx) {
+        data.courses.splice(idx, 1);
+        saveData(data);
+        renderCourses();
+    }
+
+    function renderCourses() {
+        const list = document.getElementById('course-list');
+        const totalEl = document.getElementById('total-credits');
+        if (!data.courses.length) {
+            list.innerHTML = '<div class="empty"><span>📭</span>还没有添加课程</div>';
+            totalEl.textContent = '0';
+            return;
+        }
+        const total = data.courses.reduce((s, c) => s + c.credits, 0);
+        totalEl.textContent = total;
+        list.innerHTML = data.courses.map((c, i) => `
+            <div class="exam-item">
+                <div class="exam-name">${c.name} <small>${c.credits}学分</small></div>
+                <div class="exam-info">${c.teacher || ''} ${c.time || ''} ${c.location || ''} <button class="btn btn-danger" onclick="deleteCourse(${i})" style="float:right">删除</button></div>
+            </div>
+        `).join('');
+    }
+
+    // ===== 任务功能 =====
+    function addTask() {
+        const name = document.getElementById('task-name').value.trim();
+        const deadline = document.getElementById('task-deadline').value;
+        const type = document.getElementById('task-type').value;
+        const hours = parseFloat(document.getElementById('task-hours').value);
+        if (!name) { showToast('请输入任务内容', 'error'); return; }
+        if (!deadline) { showToast('请选择截止日期', 'error'); return; }
+        data.tasks.push({ name, deadline, type, hours, done: false, created: new Date().toISOString() });
+        saveData(data);
+        document.getElementById('task-name').value = '';
+        showToast('任务已添加！');
+        renderTasks();
+    }
+
+    function toggleTask(idx) {
+        data.tasks[idx].done = !data.tasks[idx].done;
+        saveData(data);
+        renderTasks();
+    }
+
+    function deleteTask(idx) {
+        data.tasks.splice(idx, 1);
+        saveData(data);
+        renderTasks();
+    }
+
+    function renderTasks() {
+        const list = document.getElementById('task-list');
+        const pending = data.tasks.filter(t => !t.done);
+        const done = data.tasks.filter(t => t.done);
+        document.getElementById('pending-count').textContent = pending.length;
+        document.getElementById('done-count').textContent = done.length;
+        document.getElementById('total-hours').textContent = pending.reduce((s, t) => s + t.hours, 0) + 'h';
+
+        const sorted = pending.map((t, i) => ({...t, idx: data.tasks.indexOf(t)})).sort((a, b) => a.deadline.localeCompare(b.deadline));
+
+        if (!sorted.length && !done.length) {
+            list.innerHTML = '<div class="empty"><span>🎉</span>没有待办任务</div>';
+            return;
+        }
+
+        let html = sorted.map(t => {
+            const days = Math.ceil((new Date(t.deadline) - new Date()) / 86400000);
+            let urgency = days < 0 ? '🔴 已逾期' : days <= 2 ? `🔴 ${days}天后` : days <= 5 ? `🟡 ${days}天后` : `🟢 ${days}天后`;
+            return `<div class="task-item">
+                <input type="checkbox" onchange="toggleTask(${t.idx})" style="width:auto">
+                <div class="task-info">
+                    <div class="task-name">${t.type} ${t.name}</div>
+                    <div class="task-meta">${urgency} · 截止 ${t.deadline} · 预计 ${t.hours}h</div>
+                </div>
+                <button class="btn btn-danger" onclick="deleteTask(${t.idx})">✕</button>
+            </div>`;
+        }).join('');
+
+        if (done.length) {
+            html += `<details style="margin-top:1rem"><summary style="cursor:pointer;color:#888;font-size:0.9rem">已完成（${done.length}项）</summary>`;
+            html += done.map(t => `<div class="task-item done"><span>${t.name}</span><button class="btn btn-danger" onclick="deleteTask(${data.tasks.indexOf(t)})" style="margin-left:auto">✕</button></div>`).join('');
+            html += '</details>';
+        }
+        list.innerHTML = html;
+    }
+
+    // ===== 学习统计 =====
+    let studyChart = null;
+
+    function addLog() {
+        const date = document.getElementById('log-date').value;
+        const subject = document.getElementById('log-subject').value.trim();
+        const hours = parseFloat(document.getElementById('log-hours').value);
+        const mood = document.getElementById('log-mood').value;
+        if (!date) { showToast('请选择日期', 'error'); return; }
+        data.logs.push({ date, subject, hours, mood, created: new Date().toISOString() });
+        saveData(data);
+        showToast('学习记录已保存！');
+        renderStats();
+    }
+
+    function renderStats() {
+        if (!data.logs.length) {
+            document.getElementById('total-study').textContent = '0h';
+            document.getElementById('avg-study').textContent = '0h';
+            document.getElementById('log-days').textContent = '0';
+            if (studyChart) { studyChart.destroy(); studyChart = null; }
+            return;
+        }
+
+        const total = data.logs.reduce((s, l) => s + l.hours, 0);
+        const days = new Set(data.logs.map(l => l.date)).size;
+        const avg = total / days;
+
+        document.getElementById('total-study').textContent = total.toFixed(1) + 'h';
+        document.getElementById('avg-study').textContent = avg.toFixed(1) + 'h';
+        document.getElementById('log-days').textContent = days;
+
+        // 周进度
+        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        const weekHours = data.logs.filter(l => l.date >= weekAgo).reduce((s, l) => s + l.hours, 0);
+        const pct = Math.min(weekHours / 20 * 100, 100);
+        document.getElementById('week-progress').style.width = pct + '%';
+        document.getElementById('week-progress-text').textContent = pct.toFixed(0) + '%';
+
+        // 图表
+        const sorted = [...data.logs].sort((a, b) => a.date.localeCompare(b.date));
+        const labels = sorted.map(l => l.date.slice(5));
+        const values = sorted.map(l => l.hours);
+
+        if (studyChart) studyChart.destroy();
+        const ctx = document.getElementById('study-chart').getContext('2d');
+        studyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: '学习时长(h)',
+                    data: values,
+                    backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                    borderColor: '#667eea',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: '小时' } },
+                    x: { title: { display: true, text: '日期' } }
+                }
+            }
+        });
+    }
+
+    // 初始化渲染
+    renderExams();
+    renderCourses();
+    renderTasks();
+    renderStats();
+    </script>
+</body>
+</html>
